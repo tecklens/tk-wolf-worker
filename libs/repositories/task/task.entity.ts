@@ -1,6 +1,6 @@
 import {
   EnvironmentId,
-  ITaskEntity,
+  ITask,
   NodeId,
   OrganizationId,
   ProviderId,
@@ -8,9 +8,9 @@ import {
   TaskStatus,
   UserId,
   WorkflowId,
-} from '@wolf/stateless';
+} from '@wolfxlabs/stateless';
 
-export class TaskEntity implements ITaskEntity {
+export class TaskEntity implements ITask {
   id?: string;
   _id?: TaskId;
   _workflowId: WorkflowId;
@@ -22,6 +22,7 @@ export class TaskEntity implements ITaskEntity {
   providerName: string;
   payload: any;
   channel: string;
+  transactionId: string;
 
   deletedAt?: Date;
   deletedBy?: string;

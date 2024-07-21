@@ -1,7 +1,7 @@
 import { BaseRepository } from '../base-repository';
 import { TaskDBModel, TaskEntity } from './task.entity';
 import { Task } from '@libs/repositories/task/task.schema';
-import { TaskStatus } from '@wolf/stateless';
+import { TaskStatus } from '@wolfxlabs/stateless';
 
 export class TaskRepository extends BaseRepository<
   TaskDBModel,
@@ -41,7 +41,7 @@ export class TaskRepository extends BaseRepository<
     errorDetail: any,
     bodyWebhook: any | undefined,
   ) {
-    this.updateOne(
+    await this.updateOne(
       {
         _id: taskId,
       },

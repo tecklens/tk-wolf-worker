@@ -1,6 +1,6 @@
 import { BaseRepository } from '../base-repository';
 import { EdgeDBModel, EdgeEntity } from './edge.entity';
-import { EdgeSchema } from '@libs/repositories/edge/edge.schema';
+import { EdgeSchema } from './edge.schema';
 
 export class EdgeRepository extends BaseRepository<
   EdgeDBModel,
@@ -27,7 +27,7 @@ export class EdgeRepository extends BaseRepository<
   }
 
   async delByIds(ids: string[]) {
-    this.delete({
+    await this.delete({
       _id: {
         $in: ids,
       },

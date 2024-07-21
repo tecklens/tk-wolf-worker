@@ -2,20 +2,19 @@ import { Types } from 'mongoose';
 
 import {
   ChangePropsValueType,
-  IMember,
   IMemberInvite,
-  IUserEntity,
   MemberRoleEnum,
   MemberStatusEnum,
   OrganizationId,
-} from '@wolf/stateless';
+  IUser,
+} from '@wolfxlabs/stateless';
 
-export class MemberEntity implements IMember {
+export class MemberEntity {
   _id: string;
 
   _userId: string;
 
-  user?: Pick<IUserEntity, 'firstName' | '_id' | 'lastName' | 'email'>;
+  user?: Pick<IUser, 'firstName' | '_id' | 'lastName' | 'email'>;
 
   roles: MemberRoleEnum[];
 

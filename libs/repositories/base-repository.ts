@@ -13,7 +13,7 @@ import {
   DEFAULT_MESSAGE_GENERIC_RETENTION_DAYS,
   DEFAULT_MESSAGE_IN_APP_RETENTION_DAYS,
   DEFAULT_NOTIFICATION_RETENTION_DAYS,
-} from '@wolf/stateless';
+} from '@wolfxlabs/stateless';
 
 export class BaseRepository<T_DBModel, T_MappedEntity, T_Enforcement> {
   public _model: Model<T_DBModel>;

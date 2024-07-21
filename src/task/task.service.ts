@@ -5,28 +5,30 @@ import {
   NotFoundException,
   PreconditionFailedException,
 } from '@nestjs/common';
-import { ProducerService } from '@app/kafka/producer/producer.service';
 import { KafkaMessage } from 'kafkajs';
+import { HttpService } from '@nestjs/axios';
 import { get } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
-import { HttpService } from '@nestjs/axios';
-import { NodeRepository } from '@libs/repositories/node/node.repository';
-import { EdgeRepository } from '@libs/repositories/edge/edge.repository';
-import { TaskRepository } from '@libs/repositories/task/task.repository';
-import { VariableRepository } from '@libs/repositories/variable/variable.repository';
-import { MemberRepository } from '@libs/repositories/member';
+import { ProducerService } from '@app/kafka/producer/producer.service';
+import { NodeRepository } from '@libs/repositories/node';
+import { EdgeRepository } from '@libs/repositories/edge';
+import { TaskRepository } from '@libs/repositories/task';
 import { ProviderRepository } from '@libs/repositories/provider';
+import { MemberRepository } from '@libs/repositories/member';
+import { VariableRepository } from '@libs/repositories/variable';
 import {
   ChannelTypeEnum,
+  CreateNotiDto,
   decryptCredentials,
+  EventTypes,
   IContent,
+  IEventQueue,
   IMember,
   INextJob,
   INodeData,
   INodeEntity,
-  IOverridesDataTrigger,
   IProvider,
-  ITargetTrigger,
+  ITaskTimeline,
   IVariable,
   IWebhookData,
   makeid,
@@ -34,14 +36,15 @@ import {
   TaskStatus,
   transformContent,
   WfNodeType,
-} from '@wolf/stateless';
-import { ChatFactory, MailFactory, SmsFactory } from '@wolf/providers';
+} from '@wolfxlabs/stateless';
+import { TaskTimelineRepository } from '@libs/repositories/task-timeline';
+import { ChatFactory, MailFactory, SmsFactory } from '@wolfxlabs/providers';
 import * as process from 'process';
-import { CreateNotiDto } from '../../../tk-wolf/packages/stateless/src';
 
 @Injectable()
 export class TaskService {
   private logger = new Logger('TaskService');
+  private topicTaskTimeline: string;
 
   constructor(
     private readonly sender: ProducerService,
@@ -51,21 +54,37 @@ export class TaskService {
     private readonly providerRepository: ProviderRepository,
     private readonly memberRepository: MemberRepository,
     private readonly variableRepository: VariableRepository,
+    private readonly taskTimelineRepository: TaskTimelineRepository,
     private readonly httpService: HttpService,
     private readonly producerService: ProducerService,
-  ) {}
-
-  async nextJob(
-    workflowId: string,
-    workflowName: string,
-    orgId: string,
-    envId: string,
-    target: ITargetTrigger,
-    overrides: IOverridesDataTrigger,
-    userId: string,
-    type: string,
-    previousNodeId: string | undefined,
   ) {
+    this.topicTaskTimeline = process.env.KAFKA_LOG_TASK_TIMELINE;
+  }
+
+  async saveTaskTimeline(message: KafkaMessage) {
+    const strData = message.value.toString();
+
+    const data: IEventQueue<ITaskTimeline> = JSON.parse(strData);
+
+    await this.taskTimelineRepository.create({
+      event: data.type,
+      createdAt: data.createdAt,
+      ...data.data,
+    });
+  }
+
+  async nextJob({
+    workflowId,
+    workflowName,
+    orgId,
+    envId,
+    target,
+    overrides,
+    userId,
+    type,
+    previousNodeId,
+    transactionId,
+  }: any) {
     let node: INodeEntity;
     if (type === 'starter') {
       node = await this.nodeRepository.findOneByWorkflowIdAndType(
@@ -95,6 +114,7 @@ export class TaskService {
           workflowName,
           userId,
           overrides: overrides,
+          transactionId: transactionId,
         };
 
         await this.sender.produce({
@@ -261,12 +281,7 @@ export class TaskService {
             );
           });
       } catch (e) {
-        await this.taskRepository.updateStatus(
-          task._id,
-          TaskStatus.cancel,
-          e,
-          null,
-        );
+        await this.markCancelTask(task._id, inp.userId, inp.workflowId);
       }
     }
   }
@@ -314,6 +329,7 @@ export class TaskService {
       priority: 'medium',
       email: inp.target.email,
       phone: inp.target.phone,
+      transactionId: inp.transactionId,
     });
     try {
       const identifier = uuidv4();
@@ -338,15 +354,11 @@ export class TaskService {
       });
 
       if (!result?.id) {
+        await this.markCancelTask(task._id, inp.userId, inp.workflowId);
         return;
       }
 
-      await this.taskRepository.updateStatus(
-        task._id,
-        TaskStatus.done,
-        null,
-        undefined,
-      );
+      await this.markDoneTask(task._id, inp.userId, inp.workflowId);
     } catch (e) {
       // await this.sendErrorStatus(
       //   message,
@@ -359,12 +371,7 @@ export class TaskService {
       // );
 
       this.logger.error(e);
-      await this.taskRepository.updateStatus(
-        task._id,
-        TaskStatus.cancel,
-        e.toString(),
-        undefined,
-      );
+      await this.markCancelTask(task._id, inp.userId, inp.workflowId);
     }
   }
 
@@ -414,8 +421,10 @@ export class TaskService {
         priority: 'medium',
         email: inp.target.email,
         phone: inp.target.phone,
+        transactionId: inp.transactionId,
       });
       try {
+        // const identifier = uuidv4();
         const overrides = inp.overrides ?? {};
         const plainProvider = this.buildFactoryIntegration(provider);
 
@@ -442,15 +451,11 @@ export class TaskService {
         // TODO setup properties of chat sender
 
         if (!result?.id) {
+          await this.markCancelTask(task._id, inp.userId, inp.workflowId);
           return;
         }
 
-        await this.taskRepository.updateStatus(
-          task._id,
-          TaskStatus.done,
-          null,
-          undefined,
-        );
+        await this.markDoneTask(task._id, inp.userId, inp.workflowId);
       } catch (e) {
         // await this.sendErrorStatus(
         //   message,
@@ -463,12 +468,7 @@ export class TaskService {
         // );
 
         this.logger.error(e);
-        await this.taskRepository.updateStatus(
-          task._id,
-          TaskStatus.cancel,
-          e.toString(),
-          undefined,
-        );
+        await this.markCancelTask(task._id, inp.userId, inp.workflowId);
       }
     } catch (e) {
       this.logger.debug(e);
@@ -512,12 +512,22 @@ export class TaskService {
           status: TaskStatus.in_process,
           priority: 'medium',
           email: inp.target.email,
+          transactionId: inp.transactionId,
         });
+        this.sendLogTaskTimeline(
+          EventTypes['message.in_process'],
+          inp.userId,
+          task._id,
+          inp.workflowId,
+        );
         try {
           const html = transformContent(variables, data.designHtml, {
             ...inp.target,
             ...inp.overrides,
           });
+          // const script = `<img src="http://localhost:5000/wolf/v1/events/email/tracking/${task._id}?type=message.link_clicked&tx_id=${task.transactionId}" alt="" style="display:none;"></img>`;
+          // html = html.replace(/(<\s*\/\s*table)/, `${script}\n$1`);
+
           const result = await mailHandler.send({
             from: data.sender,
             to: [inp.target.email],
@@ -525,16 +535,12 @@ export class TaskService {
             subject: data.subject,
           });
           if (!result?.id) {
+            await this.markCancelTask(task._id, inp.userId, inp.workflowId);
             throw new BadRequestException(
               'Error when send email. Check log task id: ' + task._id,
             );
           }
-          await this.taskRepository.updateStatus(
-            task._id,
-            TaskStatus.done,
-            null,
-            undefined,
-          );
+          await this.markDoneTask(task._id, inp.userId, inp.workflowId);
 
           await this.sender.sendAny<CreateNotiDto>(
             process.env.KAFKA_NOTIFICATION_TASK_TOPIC,
@@ -548,27 +554,23 @@ export class TaskService {
           );
         } catch (e) {
           this.logger.error(e);
-          await this.taskRepository.updateStatus(
-            task._id,
-            TaskStatus.cancel,
-            e.toString(),
-            undefined,
-          );
+          await this.markCancelTask(task._id, inp.userId, inp.workflowId);
         }
 
         this.logger.verbose('Email message has been sent');
         // * send websocket
-        await this.nextJob(
-          inp.workflowId,
-          inp.workflowName,
-          inp.organizationId,
-          inp.environmentId,
-          inp.target,
-          inp.overrides,
-          inp.userId,
-          node.type,
-          node._id,
-        );
+        await this.nextJob({
+          workflowId: inp.workflowId,
+          workflowName: inp.workflowName,
+          orgId: inp.organizationId,
+          envId: inp.environmentId,
+          target: inp.target,
+          overrides: inp.overrides,
+          userId: inp.userId,
+          type: node.type,
+          previousNodeId: node._id,
+          transactionId: inp.transactionId,
+        });
       } catch (error) {
         // * send websocket error
         // TODO save log error
@@ -582,7 +584,7 @@ export class TaskService {
     }
   }
 
-  public buildFactoryIntegration(integration: IProvider) {
+  public buildFactoryIntegration(integration: IProvider): IProvider {
     return {
       ...integration,
       credentials: {
@@ -590,5 +592,63 @@ export class TaskService {
       },
       providerId: integration.providerId,
     };
+  }
+
+  private async markDoneTask(
+    taskId: string,
+    userId: string,
+    workflowId: string,
+  ) {
+    await this.taskRepository.updateStatus(
+      taskId,
+      TaskStatus.done,
+      null,
+      undefined,
+    );
+
+    this.sendLogTaskTimeline(
+      EventTypes['message.done'],
+      userId,
+      taskId,
+      workflowId,
+    );
+  }
+
+  private async markCancelTask(
+    taskId: string,
+    userId: string,
+    workflowId: string,
+  ) {
+    await this.taskRepository.updateStatus(
+      taskId,
+      TaskStatus.cancel,
+      null,
+      undefined,
+    );
+
+    this.sendLogTaskTimeline(
+      EventTypes['message.cancel'],
+      userId,
+      taskId,
+      workflowId,
+    );
+  }
+
+  private sendLogTaskTimeline(
+    type: EventTypes,
+    userId: string,
+    taskId: string,
+    workflowId: string,
+  ) {
+    this.producerService.sendEvent<ITaskTimeline>(this.topicTaskTimeline, {
+      type: type,
+      createdAt: new Date(),
+      data: {
+        _userId: userId,
+        _taskId: taskId,
+        _workflowId: workflowId,
+        createdBy: userId,
+      },
+    });
   }
 }

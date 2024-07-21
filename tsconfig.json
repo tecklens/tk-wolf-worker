@@ -1,5 +1,10 @@
 {
   "compilerOptions": {
+    "baseUrl": "./",
+    "paths": {
+      "@app/*": ["src/*"],
+      "@libs/*": ["libs/*"],
+    },
     "module": "commonjs",
     "declaration": true,
     "removeComments": true,
@@ -9,17 +14,14 @@
     "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
-    "paths": {
-      "@app/*": ["src/*"],
-      "@libs/*": ["libs/*"],
-    },
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": false,
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "esModuleInterop": true,
+    "moduleResolution": "node"
   }
 }

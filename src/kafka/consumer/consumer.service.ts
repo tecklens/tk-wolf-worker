@@ -1,5 +1,10 @@
-import {Injectable, OnApplicationShutdown,} from '@nestjs/common';
-import {Consumer, ConsumerRunConfig, ConsumerSubscribeTopics, Kafka,} from 'kafkajs';
+import { Injectable, OnApplicationShutdown } from '@nestjs/common';
+import {
+  Consumer,
+  ConsumerRunConfig,
+  ConsumerSubscribeTopics,
+  Kafka,
+} from 'kafkajs';
 
 @Injectable()
 export class ConsumerService implements OnApplicationShutdown {

@@ -3,16 +3,17 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 import helmet from 'helmet';
+import * as process from 'process';
 
 export default async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
-  const configService = app.get(ConfigService);
+  const configService = app.get<string>(ConfigService);
 
   // * cors
   app.use(helmet());
 
-  const port = configService.get('PORT') ?? 4000;
+  const port = process.env.PORT ?? 4000;
 
   await app.listen(3000);
 

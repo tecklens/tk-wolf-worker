@@ -1,9 +1,16 @@
-import { INodeEntity, NodeId, Position, XYPosition } from '@wolf/stateless';
+import {
+  INodeEntity,
+  NodeId,
+  Position,
+  ProviderId,
+  WorkflowId,
+  XYPosition,
+} from '@wolfxlabs/stateless';
 
 export class NodeEntity implements INodeEntity {
   _id?: NodeId;
-  _workflowId: string;
-  _providerId: string;
+  _workflowId: WorkflowId;
+  _providerId: ProviderId;
 
   deleted: boolean;
   connected: boolean;

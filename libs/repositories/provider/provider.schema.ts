@@ -60,7 +60,6 @@ const providerSchema = new Schema<ProviderDBModel>(
       apiToken: Schema.Types.String,
       chatId: Schema.Types.String,
       testEnvironment: Schema.Types.Boolean,
-      CPCode: Schema.Types.String,
     },
     active: {
       type: Schema.Types.Boolean,
@@ -77,7 +76,7 @@ const providerSchema = new Schema<ProviderDBModel>(
       default: false,
     },
   },
-  schemaOptions
+  schemaOptions,
 );
 
 providerSchema.index({
@@ -85,7 +84,11 @@ providerSchema.index({
   active: 1,
 });
 
-providerSchema.plugin(mongooseDelete, { deletedAt: true, deletedBy: true, overrideMethods: 'all' });
+providerSchema.plugin(mongooseDelete, {
+  deletedAt: true,
+  deletedBy: true,
+  overrideMethods: 'all',
+});
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const Provider =

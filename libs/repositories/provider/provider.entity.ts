@@ -3,12 +3,11 @@ import {
   ChannelTypeEnum,
   EnvironmentId,
   ICredentials,
-  IProvider,
   OrganizationId,
   ProviderId,
-} from '@wolf/stateless';
+} from '@wolfxlabs/stateless';
 
-export class ProviderEntity implements IProvider {
+export class ProviderEntity {
   _id?: ProviderId;
 
   _environmentId: EnvironmentId;
