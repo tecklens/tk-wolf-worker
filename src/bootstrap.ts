@@ -13,6 +13,8 @@ export default async function bootstrap() {
   // * cors
   app.use(helmet());
 
+  console.log(process.env.PORT, "process.env.PORT");
+
   const port = process.env.PORT ?? 4000;
 
   await app.listen(3000);

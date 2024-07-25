@@ -8,6 +8,7 @@ import { TaskRepository } from '@libs/repositories/task/task.repository';
 import { ProviderRepository } from '@libs/repositories/provider';
 import { MemberRepository } from '@libs/repositories/member';
 import { VariableRepository } from '@libs/repositories/variable';
+import { TaskTimelineRepository } from '@libs/repositories/task-timeline';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { VariableRepository } from '@libs/repositories/variable';
   ],
   providers: [
     TaskService,
+    TaskTimelineRepository,
     NodeRepository,
     EdgeRepository,
     TaskRepository,

@@ -3,6 +3,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  OnModuleInit,
   PreconditionFailedException,
 } from '@nestjs/common';
 import { KafkaMessage } from 'kafkajs';
@@ -40,14 +41,16 @@ import {
 import { TaskTimelineRepository } from '@libs/repositories/task-timeline';
 import { ChatFactory, MailFactory, SmsFactory } from '@wolfxlabs/providers';
 import * as process from 'process';
+import { ConsumerService } from '@app/kafka/consumer/consumer.service';
 
 @Injectable()
-export class TaskService {
+export class TaskService implements OnModuleInit {
   private logger = new Logger('TaskService');
-  private topicTaskTimeline: string;
+  private readonly topicTaskTimeline: string;
 
   constructor(
     private readonly sender: ProducerService,
+    private readonly consumerService: ConsumerService,
     private readonly nodeRepository: NodeRepository,
     private readonly edgeRepository: EdgeRepository,
     private readonly taskRepository: TaskRepository,
@@ -56,9 +59,60 @@ export class TaskService {
     private readonly variableRepository: VariableRepository,
     private readonly taskTimelineRepository: TaskTimelineRepository,
     private readonly httpService: HttpService,
-    private readonly producerService: ProducerService,
   ) {
     this.topicTaskTimeline = process.env.KAFKA_LOG_TASK_TIMELINE;
+  }
+
+  async onModuleInit() {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const nextTopicDelay = `${process.env.KAFKA_PREFIX_JOB_TOPIC}.delay`;
+    await this.consumerService.consume(
+      {
+        topics: [
+          process.env.KAFKA_NEXT_JOB_TOPIC,
+          process.env.KAFKA_LOG_TASK_TIMELINE,
+          nextTopicDelay,
+        ],
+      },
+      {
+        eachBatchAutoResolve: true,
+        eachBatch: async ({ batch, resolveOffset, heartbeat }) => {
+          for (const message of batch.messages) {
+            const topic = batch.topic,
+              partition = batch.partition;
+            if (topic === process.env.KAFKA_NEXT_JOB_TOPIC) {
+              this.exeNextJob({
+                topic,
+                partition,
+                message,
+              }).then(() => {});
+            } else if (topic === nextTopicDelay) {
+              const data: INextJob = JSON.parse(message.value.toString());
+              if (data.workflowId && data.organizationId) {
+                this.nextJob({
+                  workflowId: data.workflowId,
+                  workflowName: data.workflowName,
+                  orgId: data.organizationId,
+                  envId: data.environmentId,
+                  target: data.target,
+                  overrides: data.overrides,
+                  userId: data.userId,
+                  type: 'delay',
+                  previousNodeId: data.currentNodeId,
+                  transactionId: data.transactionId,
+                }).then(() => {});
+              }
+            } else if (topic === process.env.KAFKA_LOG_TASK_TIMELINE) {
+              this.saveTaskTimeline(message).then(() => {});
+            }
+
+            resolveOffset(message.offset);
+            await heartbeat();
+          }
+        },
+        autoCommitInterval: 500,
+      },
+    );
   }
 
   async saveTaskTimeline(message: KafkaMessage) {
@@ -542,7 +596,7 @@ export class TaskService {
           }
           await this.markDoneTask(task._id, inp.userId, inp.workflowId);
 
-          await this.sender.sendAny<CreateNotiDto>(
+          this.sender.sendAny<CreateNotiDto>(
             process.env.KAFKA_NOTIFICATION_TASK_TOPIC,
             {
               userId: inp.userId,
@@ -640,7 +694,7 @@ export class TaskService {
     taskId: string,
     workflowId: string,
   ) {
-    this.producerService.sendEvent<ITaskTimeline>(this.topicTaskTimeline, {
+    this.sender.sendEvent<ITaskTimeline>(this.topicTaskTimeline, {
       type: type,
       createdAt: new Date(),
       data: {
