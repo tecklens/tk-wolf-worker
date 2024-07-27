@@ -175,7 +175,6 @@ export class TaskService implements OnModuleInit {
         await this.sender.produce({
           messages: [
             {
-              key: userId,
               value: JSON.stringify(dataTransfer),
             },
           ],

@@ -5,7 +5,9 @@ import { Logger } from '@nestjs/common';
 import helmet from 'helmet';
 
 export default async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+  });
 
   const configService = app.get<any>(ConfigService);
 
