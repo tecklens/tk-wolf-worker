@@ -2,17 +2,11 @@ module.exports = {
   apps: [
     {
       name: 'worker-1',
-      script: 'npm run start:prod',
-      env: {
-        NODE_PORT: '4000',
-      },
+      script: 'PORT=4000 npm run start:prod',
     },
     {
       name: 'worker-1',
-      script: 'npm run start:prod',
-      env: {
-        NODE_PORT: '4001',
-      },
+      script: 'PORT=4001 npm run start:prod',
     },
   ],
 };

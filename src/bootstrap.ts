@@ -16,7 +16,7 @@ export default async function bootstrap() {
     ? parseInt(configService.get('PORT'))
     : 4000;
 
-  await app.listen(3000);
+  await app.listen(port);
 
   Logger.log(`Starting UserApplication using Nestjs 10.0.0 on port: ${port}`);
   Logger.log('BOOTSTRAPPED SUCCESSFULLY');
