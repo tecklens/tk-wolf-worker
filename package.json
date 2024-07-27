@@ -28,7 +28,7 @@
     "@nestjs/mongoose": "^10.0.6",
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/terminus": "^10.2.3",
-    "@wolfxlabs/providers": "^1.0.2",
+    "@wolfxlabs/providers": "^1.0.3",
     "@wolfxlabs/stateless": "^1.0.2",
     "class-transformer": "^0.5.1",
     "date-fns": "^3.6.0",
