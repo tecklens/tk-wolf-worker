@@ -1,9 +1,19 @@
 import { Module } from '@nestjs/common';
 import { AppService } from './app.service';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { MongooseModule } from '@nestjs/mongoose';
+import { ConfigModule } from '@nestjs/config';
 import { TaskModule } from './task/task.module';
 import { TerminusModule } from '@nestjs/terminus';
+import { DbService } from '@libs/repositories/DbService';
+
+export const dbService = {
+  provide: DbService,
+  useFactory: async () => {
+    const service = new DbService();
+    await service.connect(String(process.env.MONGO_URL));
+
+    return service;
+  },
+};
 
 @Module({
   imports: [
@@ -11,17 +21,9 @@ import { TerminusModule } from '@nestjs/terminus';
       isGlobal: true,
     }),
     TerminusModule,
-    MongooseModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGO_URL'),
-        maxPoolSize: configService.get<number>('MONGO_MAX_POOL_SIZE'),
-        minPoolSize: configService.get<number>('MONGO_MIN_POOL_SIZE'),
-      }),
-      inject: [ConfigService],
-    }),
     TaskModule,
   ],
-  providers: [AppService],
+  providers: [AppService, dbService],
+  exports: [dbService],
 })
 export class AppModule {}

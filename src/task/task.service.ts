@@ -29,6 +29,7 @@ import {
   INodeData,
   INodeEntity,
   IProvider,
+  ISendMessageSuccessResponse,
   ITaskTimeline,
   IVariable,
   IWebhookData,
@@ -399,7 +400,7 @@ export class TaskService implements OnModuleInit {
         );
       }
 
-      const result = await smsHandler.send({
+      const result: ISendMessageSuccessResponse = await smsHandler.send({
         to: phone,
         from: overrides.from || provider.credentials.from,
         content: contentPlainText,
@@ -493,7 +494,7 @@ export class TaskService implements OnModuleInit {
         const chatWebhookUrl =
           overrides?.baseUrl || provider.credentials?.baseUrl;
 
-        const result = await chatHandler.send({
+        const result: ISendMessageSuccessResponse = await chatHandler.send({
           webhookUrl: chatWebhookUrl,
           channel: plainProvider.credentials?.channel,
           content: contentPlainText,
@@ -502,7 +503,6 @@ export class TaskService implements OnModuleInit {
           baseUrl: plainProvider.credentials.baseUrl,
           testEnvironment: plainProvider.credentials.testEnvironment,
         });
-        // TODO setup properties of chat sender
 
         if (!result?.id) {
           await this.markCancelTask(task._id, inp.userId, inp.workflowId);
