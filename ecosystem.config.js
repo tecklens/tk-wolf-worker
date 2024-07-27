@@ -3,14 +3,14 @@ module.exports = {
     {
       name: 'worker-1',
       script: 'npm run start:prod',
-      env_production: {
+      env: {
         NODE_PORT: '4000',
       },
     },
     {
       name: 'worker-1',
       script: 'npm run start:prod',
-      env_production: {
+      env: {
         NODE_PORT: '4001',
       },
     },
