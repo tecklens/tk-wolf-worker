@@ -335,7 +335,12 @@ export class TaskService implements OnModuleInit {
             );
           });
       } catch (e) {
-        await this.markCancelTask(task._id, inp.userId, inp.workflowId);
+        await this.markCancelTask(
+          task._id,
+          inp.userId,
+          inp.workflowId,
+          e?.message,
+        );
       }
     }
   }
@@ -408,7 +413,12 @@ export class TaskService implements OnModuleInit {
       });
 
       if (!result?.id) {
-        await this.markCancelTask(task._id, inp.userId, inp.workflowId);
+        await this.markCancelTask(
+          task._id,
+          inp.userId,
+          inp.workflowId,
+          'The error occurred when sending information to the providers.',
+        );
         return;
       }
 
@@ -425,7 +435,12 @@ export class TaskService implements OnModuleInit {
       // );
 
       this.logger.error(e);
-      await this.markCancelTask(task._id, inp.userId, inp.workflowId);
+      await this.markCancelTask(
+        task._id,
+        inp.userId,
+        inp.workflowId,
+        e?.message,
+      );
     }
   }
 
@@ -504,7 +519,12 @@ export class TaskService implements OnModuleInit {
         });
 
         if (!result?.id) {
-          await this.markCancelTask(task._id, inp.userId, inp.workflowId);
+          await this.markCancelTask(
+            task._id,
+            inp.userId,
+            inp.workflowId,
+            'The error occurred when sending information to the providers.',
+          );
           return;
         }
 
@@ -521,7 +541,12 @@ export class TaskService implements OnModuleInit {
         // );
 
         this.logger.error(e);
-        await this.markCancelTask(task._id, inp.userId, inp.workflowId);
+        await this.markCancelTask(
+          task._id,
+          inp.userId,
+          inp.workflowId,
+          e?.message,
+        );
       }
     } catch (e) {
       this.logger.debug(e);
@@ -588,7 +613,12 @@ export class TaskService implements OnModuleInit {
             subject: data.subject,
           });
           if (!result?.id) {
-            await this.markCancelTask(task._id, inp.userId, inp.workflowId);
+            await this.markCancelTask(
+              task._id,
+              inp.userId,
+              inp.workflowId,
+              'The error occurred when sending information to the providers.',
+            );
             throw new BadRequestException(
               'Error when send email. Check log task id: ' + task._id,
             );
@@ -607,7 +637,12 @@ export class TaskService implements OnModuleInit {
           );
         } catch (e) {
           this.logger.error(e);
-          await this.markCancelTask(task._id, inp.userId, inp.workflowId);
+          await this.markCancelTask(
+            task._id,
+            inp.userId,
+            inp.workflowId,
+            e?.message,
+          );
         }
 
         this.logger.verbose('Email message has been sent');
@@ -671,11 +706,12 @@ export class TaskService implements OnModuleInit {
     taskId: string,
     userId: string,
     workflowId: string,
+    error: string,
   ) {
     await this.taskRepository.updateStatus(
       taskId,
       TaskStatus.cancel,
-      null,
+      error,
       undefined,
     );
 
