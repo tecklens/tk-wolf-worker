@@ -10,7 +10,7 @@ import {
 export class ConsumerService implements OnApplicationShutdown {
   // Connect to Kafka Server
   private readonly kafka = new Kafka({
-    brokers: [`${process.env.KAFKA_BROKER}`],
+    brokers: [`160.191.88.168:9092`],
 
     // ssl: true,
     // sasl: {

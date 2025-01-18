@@ -193,73 +193,77 @@ export class TaskService implements OnModuleInit {
     partition: number;
     message: KafkaMessage;
   }) {
-    this.logger.log(`Next job with topic ${topic} , partition ${partition}`);
+    try {
+      this.logger.log(`Next job with topic ${topic} , partition ${partition}`);
 
-    const strData = message.value.toString();
+      const strData = message.value.toString();
 
-    if (strData) {
-      const data: INextJob = JSON.parse(strData);
+      if (strData) {
+        const data: INextJob = JSON.parse(strData);
 
-      if (data.currentNodeId) {
-        const node = await this.nodeRepository.findById(
-          data.currentNodeId,
-          '_providerId deleted data type',
-        );
-
-        if (!node) return;
-
-        const provider = await this.providerRepository.findById(
-          node._providerId,
-          'channel credentials active name identifier primary conditions _environmentId _organizationId providerId',
-        );
-
-        let members: any[] = [];
-        try {
-          members = await this.memberRepository.getOrganizationMembers(
-            data.organizationId,
+        if (data.currentNodeId) {
+          const node = await this.nodeRepository.findById(
+            data.currentNodeId,
+            '_providerId deleted data type',
           );
-        } catch (e) {
-          this.logger.log('Not members in workflow org');
-        }
 
-        let variables = null;
-        switch (node.type) {
-          case ChannelTypeEnum.EMAIL:
-            variables = await this.variableRepository.findByWfId(
-              data.workflowId,
+          if (!node) return;
+
+          const provider = await this.providerRepository.findById(
+            node._providerId,
+            'channel credentials active name identifier primary conditions _environmentId _organizationId providerId',
+          );
+
+          let members: any[] = [];
+          try {
+            members = await this.memberRepository.getOrganizationMembers(
+              data.organizationId,
             );
-            await this.executeEmail(provider, node, data, members, variables);
-            break;
-          case ChannelTypeEnum.DELAY:
-            await this.executeDelay(node.data, strData, data.userId);
-            break;
-          case ChannelTypeEnum.WEBHOOK:
-            await this.executeWebhook(node, data);
-            break;
-          case ChannelTypeEnum.SMS:
-            variables = await this.variableRepository.findByWfId(
-              data.workflowId,
-            );
-            await this.executeSms(provider, node, data, members, variables);
-            break;
-          case ChannelTypeEnum.CHAT:
-            variables = await this.variableRepository.findByWfId(
-              data.workflowId,
-            );
-            await this.executeChatMessage(
-              provider,
-              node,
-              data,
-              members,
-              variables,
-            );
-            break;
-          default:
-            return;
+          } catch (e) {
+            this.logger.log('Not members in workflow org');
+          }
+
+          let variables = null;
+          switch (node.type) {
+            case ChannelTypeEnum.EMAIL:
+              variables = await this.variableRepository.findByWfId(
+                data.workflowId,
+              );
+              await this.executeEmail(provider, node, data, members, variables);
+              break;
+            case ChannelTypeEnum.DELAY:
+              await this.executeDelay(node.data, strData, data.userId);
+              break;
+            case ChannelTypeEnum.WEBHOOK:
+              await this.executeWebhook(node, data);
+              break;
+            case ChannelTypeEnum.SMS:
+              variables = await this.variableRepository.findByWfId(
+                data.workflowId,
+              );
+              await this.executeSms(provider, node, data, members, variables);
+              break;
+            case ChannelTypeEnum.CHAT:
+              variables = await this.variableRepository.findByWfId(
+                data.workflowId,
+              );
+              await this.executeChatMessage(
+                provider,
+                node,
+                data,
+                members,
+                variables,
+              );
+              break;
+            default:
+              return;
+          }
+        } else {
+          this.logger.error('Message not node id');
         }
-      } else {
-        this.logger.error('Message not node id');
       }
+    } catch (e) {
+      this.logger.error(e.stack);
     }
   }
 
@@ -549,7 +553,7 @@ export class TaskService implements OnModuleInit {
         );
       }
     } catch (e) {
-      this.logger.debug(e);
+      this.logger.debug(e.stack);
     }
   }
 
